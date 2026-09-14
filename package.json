@@ -1,0 +1,16 @@
+{
+  "name": "xrpl-platform",
+  "version": "0.1.0",
+  "description": "Starter platform for XRP Ledger / Ripple development",
+  "type": "module",
+  "scripts": {
+    "connect": "node src/connect.js",
+    "send": "node src/send-xrp.js"
+  },
+  "dependencies": {
+    "xrpl": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
