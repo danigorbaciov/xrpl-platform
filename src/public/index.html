@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>XRPL Platform</title>
   <style>
-    :root { --bg: #0a0e17; --card: #121826; --accent: #00d4ff; --text: #e6edf3; --muted: #8b949e; }
+    :root { --bg: #0a0e17; --card: #121826; --accent: #00d4ff; --text: #e6edf3; --muted: #8b949e; --danger: #ff6b6b; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
     header { background: var(--card); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2937; }
@@ -17,14 +17,21 @@
     .card h2 { margin-bottom: 1rem; font-size: 1.1rem; }
     .balance { font-size: 2rem; font-weight: bold; color: var(--accent); }
     .points { font-size: 1.5rem; color: #ffd700; }
-    input, textarea { width: 100%; padding: 0.75rem; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: var(--text); margin-bottom: 0.75rem; }
+    input, textarea, select { width: 100%; padding: 0.75rem; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: var(--text); margin-bottom: 0.75rem; }
     button.primary { background: var(--accent); color: #000; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .msg { background: #1a1f2e; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; }
     .msg.sent { text-align: right; background: #0d2818; }
     .hidden { display: none; }
     .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
     .tab { padding: 0.5rem 1rem; background: #1f2937; border-radius: 6px; cursor: pointer; }
     .tab.active { background: var(--accent); color: #000; }
+    .status { font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem; }
+    .status.ok { color: #3fb950; }
+    .status.err { color: var(--danger); }
+    .wallet-box { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .wallet-box input { flex: 1; min-width: 200px; }
+    code { background: #0d1117; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.85rem; }
   </style>
 </head>
 <body>
@@ -38,10 +45,27 @@
   </header>
   <main>
     <section id="dashboard" class="card">
-      <h2>Contul tău XRPL</h2>
-      <div class="balance" id="xrpBalance">0.00 XRP</div>
-      <p style="color:var(--muted);margin-top:0.5rem">Conectat la Testnet</p>
-      <button class="primary" onclick="refreshBalance()">Actualizează</button>
+      <h2>Conectează wallet real</h2>
+      <div class="wallet-box">
+        <select id="network">
+          <option value="testnet">Testnet (gratuit)</option>
+          <option value="mainnet">Mainnet (XRP real)</option>
+        </select>
+        <input type="password" id="seed" placeholder="Seed wallet (s...)" autocomplete="off">
+        <button class="primary" onclick="connectWallet()">Conectează</button>
+      </div>
+      <div id="walletStatus" class="status"></div>
+      <div id="walletInfo" class="hidden" style="margin-top:1rem">
+        <div class="balance" id="xrpBalance">0.00 XRP</div>
+        <p style="color:var(--muted);margin-top:0.5rem">Adresă: <code id="walletAddress">—</code></p>
+        <p style="color:var(--muted)">Sequence: <span id="walletSeq">—</span> · <a id="explorerLink" href="#" target="_blank" style="color:var(--accent)">Vezi pe explorer</a></p>
+        <hr style="border:0;border-top:1px solid #1f2937;margin:1rem 0">
+        <h3 style="font-size:1rem;margin-bottom:0.5rem">Trimite XRP</h3>
+        <input type="text" id="destAddress" placeholder="Adresa destinatarului">
+        <input type="number" id="sendAmount" placeholder="Cantitate XRP" value="1" step="0.000001">
+        <button class="primary" onclick="sendXrpTx()">Trimite</button>
+        <div id="sendStatus" class="status"></div>
+      </div>
     </section>
 
     <section id="loyalty" class="card hidden">
@@ -62,6 +86,8 @@
   </main>
   <script>
     let currentTab = 'dashboard';
+    let connectedWallet = null;
+
     function showTab(tab) {
       document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
       document.getElementById(tab).classList.remove('hidden');
@@ -69,16 +95,69 @@
       event.target.classList.add('active');
       currentTab = tab;
     }
-    async function refreshBalance() {
-      const res = await fetch('/api/health');
-      const data = await res.json();
-      document.getElementById('xrpBalance').textContent = 'Demo: 100.00 XRP';
+
+    function setStatus(id, text, ok) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = 'status ' + (ok ? 'ok' : 'err');
     }
+
+    async function connectWallet() {
+      const seed = document.getElementById('seed').value.trim();
+      const network = document.getElementById('network').value;
+      if (!seed) { setStatus('walletStatus', 'Introdu seed-ul wallet-ului.', false); return; }
+      setStatus('walletStatus', 'Conectez...', true);
+      try {
+        const res = await fetch('/api/wallet/connect', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seed, network })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        connectedWallet = { seed, network, ...data.wallet };
+        document.getElementById('xrpBalance').textContent = data.wallet.balance.toFixed(6) + ' XRP';
+        document.getElementById('walletAddress').textContent = data.wallet.address;
+        document.getElementById('walletSeq').textContent = data.wallet.sequence;
+        document.getElementById('explorerLink').href = data.wallet.explorer;
+        document.getElementById('walletInfo').classList.remove('hidden');
+        setStatus('walletStatus', 'Conectat pe ' + network + '.', true);
+      } catch (e) {
+        setStatus('walletStatus', 'Eroare: ' + e.message, false);
+      }
+    }
+
+    async function sendXrpTx() {
+      if (!connectedWallet) { setStatus('sendStatus', 'Conectează mai întâi wallet-ul.', false); return; }
+      const dest = document.getElementById('destAddress').value.trim();
+      const amount = document.getElementById('sendAmount').value;
+      if (!dest || !amount) { setStatus('sendStatus', 'Completează destinatarul și suma.', false); return; }
+      setStatus('sendStatus', 'Trimit tranzacția...', true);
+      try {
+        const res = await fetch('/api/wallet/send', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seed: connectedWallet.seed, destination: dest, amount, network: connectedWallet.network })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        setStatus('sendStatus', 'Trimis! Hash: ' + data.hash.slice(0, 16) + '... · ' + data.explorer, true);
+        // refresh balance
+        const balRes = await fetch('/api/wallet/balance', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: connectedWallet.address, network: connectedWallet.network })
+        });
+        const balData = await balRes.json();
+        if (balData.ok) document.getElementById('xrpBalance').textContent = balData.wallet.balance.toFixed(6) + ' XRP';
+      } catch (e) {
+        setStatus('sendStatus', 'Eroare: ' + e.message, false);
+      }
+    }
+
     async function claimReward() {
       const amt = document.getElementById('rewardAmount').value;
       document.getElementById('premPoints').textContent = (parseInt(amt) + 10) + ' PREM';
       alert('Recompensă emisă! Cost real: ~0.00001 XRP fee + 0.2 XRP reserve per trustline nouă.');
     }
+
     async function sendMessage() {
       const to = document.getElementById('recipient').value;
       const msg = document.getElementById('messageInput').value;
@@ -90,7 +169,6 @@
       box.appendChild(div);
       document.getElementById('messageInput').value = '';
     }
-    refreshBalance();
   </script>
 </body>
 </html>

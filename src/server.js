@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getAccountInfo, sendXrp, walletFromSeed } from './wallet.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -10,7 +11,38 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', network: 'XRPL Testnet', features: ['dashboard', 'loyalty', 'messenger'] });
+  res.json({ status: 'ok', network: 'XRPL', features: ['dashboard', 'loyalty', 'messenger', 'real-wallet'] });
+});
+
+app.post('/api/wallet/connect', async (req, res) => {
+  try {
+    const { seed, network = 'testnet' } = req.body;
+    const wallet = walletFromSeed(seed);
+    const info = await getAccountInfo(wallet.address, network);
+    res.json({ ok: true, wallet: info });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.post('/api/wallet/balance', async (req, res) => {
+  try {
+    const { address, network = 'testnet' } = req.body;
+    const info = await getAccountInfo(address, network);
+    res.json({ ok: true, wallet: info });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.post('/api/wallet/send', async (req, res) => {
+  try {
+    const { seed, destination, amount, network = 'testnet' } = req.body;
+    const result = await sendXrp(seed, destination, parseFloat(amount), network);
+    res.json({ ok: result.success, ...result });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
 });
 
 app.listen(PORT, () => {
