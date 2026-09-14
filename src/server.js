@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getAccountInfo, sendXrp, walletFromSeed } from './wallet.js';
+import { getAccountInfo, sendXrp, walletFromSeed, generateWallet } from './wallet.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -11,7 +11,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', network: 'XRPL', features: ['dashboard', 'loyalty', 'messenger', 'real-wallet'] });
+  res.json({ status: 'ok', network: 'XRPL', features: ['dashboard', 'loyalty', 'messenger', 'real-wallet', 'wallet-gen', 'encrypted-export'] });
 });
 
 app.post('/api/wallet/connect', async (req, res) => {
@@ -45,6 +45,16 @@ app.post('/api/wallet/send', async (req, res) => {
   }
 });
 
+app.post('/api/wallet/generate', async (req, res) => {
+  try {
+    const { network = 'testnet' } = req.body;
+    const wallet = generateWallet(network);
+    res.json({ ok: true, wallet });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`XRPL Platform dashboard running at http://localhost:${PORT}`);
+  console.log(`XRPL Nexus dashboard running at http://localhost:${PORT}`);
 });

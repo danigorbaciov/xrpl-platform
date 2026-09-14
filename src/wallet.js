@@ -13,6 +13,20 @@ export function walletFromSeed(seed) {
   return Wallet.fromSeed(seed);
 }
 
+export function generateWallet(network = 'testnet') {
+  const wallet = Wallet.generate();
+  return {
+    address: wallet.address,
+    seed: wallet.seed,
+    publicKey: wallet.publicKey,
+    privateKey: wallet.privateKey,
+    network,
+    explorer: network === 'mainnet'
+      ? `https://livenet.xrpl.org/accounts/${wallet.address}`
+      : `https://testnet.xrpl.org/accounts/${wallet.address}`
+  };
+}
+
 export async function getAccountInfo(address, network = 'testnet') {
   const client = getClient(network);
   await client.connect();

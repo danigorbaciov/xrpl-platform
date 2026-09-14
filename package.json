@@ -1,7 +1,7 @@
 {
   "name": "xrpl-platform",
-  "version": "0.2.0",
-  "description": "XRPL dashboard, loyalty points and encrypted messenger",
+  "version": "0.3.0",
+  "description": "XRPL Nexus — dashboard, loyalty, encrypted messenger, wallet gen",
   "type": "module",
   "scripts": {
     "dashboard": "node src/server.js",
