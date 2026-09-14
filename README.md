@@ -1,6 +1,6 @@
 # Dani Gorbaciov - XRP Live
 
-Interactive dashboard + premium loyalty + encrypted messenger on XRP Ledger, with real wallet support and wallet generation.
+Interactive dashboard + premium loyalty + encrypted messenger + virtual chat on XRP Ledger, with real wallet support and wallet generation.
 
 ## Features
 - Connect real wallet via seed (Testnet or Mainnet)
@@ -10,6 +10,7 @@ Interactive dashboard + premium loyalty + encrypted messenger on XRP Ledger, wit
 - Send XRP to any address
 - Premium points loyalty (low-cost XRP rewards)
 - Encrypted messenger (AES-256)
+- Virtual chat: floating button, users post messages; optional 1-drop (0.000001 XRP) fee to post
 - Futuristic neon UI with button sounds and glow rings
 
 ## Quick start
@@ -25,6 +26,7 @@ Open http://localhost:3000
 - `node src/send-xrp.js` - send test XRP
 - `node src/loyalty.js` - issue premium points
 - `node src/messenger.js` - send encrypted message
+- `node src/chat.js` - virtual chat module
 - `npm run dashboard` - web UI
 
 ## Real wallet
@@ -48,5 +50,10 @@ Pune imaginea ta ca `src/public/avatar.png`. Dacă lipsește, apare un fallback 
 ## Messenger
 - Messages encrypted client-side (AES-256) with a shared key
 - Payload stored in XRPL Payment memo (1 drop) in full builds
+
+## Virtual chat
+- Buton plutitor 💬 jos-dreapta, mereu activ
+- Oamenii scriu mesaje; opțional plătesc 1 drop (0.000001 XRP) ca să posteze
+- Mesajele apar live, cu refresh automat
 
 Built with xrpl.js. For demo only.

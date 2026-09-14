@@ -127,6 +127,44 @@
     .scan { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0; }
     .btn.pressed .scan { animation: scan 0.6s ease; }
     @keyframes scan { 0% { top: 0; opacity: 0; } 20% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+    /* Virtual chat launcher */
+    .chat-launcher {
+      position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 50;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 0.6rem;
+    }
+    .chat-fab {
+      position: relative; overflow: hidden; cursor: pointer; border: 1px solid var(--accent);
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #021018; width: 64px; height: 64px; border-radius: 50%;
+      font-size: 1.6rem; font-weight: 700; display: grid; place-items: center;
+      box-shadow: 0 0 30px rgba(0,240,255,0.5), 0 8px 24px rgba(0,0,0,0.4);
+      transition: transform .15s ease, box-shadow .2s ease;
+    }
+    .chat-fab:hover { transform: scale(1.06); box-shadow: 0 0 40px rgba(0,240,255,0.7); }
+    .chat-fab .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; background: linear-gradient(135deg, #fff, var(--accent)) border-box; -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0; }
+    .chat-fab.pressed .ring { opacity: 1; animation: pulseRing .5s ease; }
+    .chat-fab .scan { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #fff, transparent); opacity: 0; }
+    .chat-fab.pressed .scan { animation: scan 0.6s ease; }
+    .chat-panel {
+      width: 340px; max-width: 90vw; border: 1px solid var(--accent); border-radius: 18px;
+      background: var(--card); backdrop-filter: blur(12px);
+      box-shadow: 0 0 40px rgba(0,240,255,0.25), 0 12px 40px rgba(0,0,0,0.5);
+      overflow: hidden; display: flex; flex-direction: column;
+    }
+    .chat-head { display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 1rem; border-bottom: 1px solid var(--line); background: rgba(0,240,255,0.06); }
+    .chat-head h3 { font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem; }
+    .chat-head h3::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #4dffb0; box-shadow: 0 0 8px #4dffb0; }
+    .chat-close { cursor: pointer; color: var(--muted); font-size: 1.2rem; line-height: 1; }
+    .chat-body { padding: 0.8rem; max-height: 320px; overflow: auto; }
+    .chat-msg { background: rgba(8,14,28,0.7); border: 1px solid #22324d; padding: 0.55rem 0.7rem; border-radius: 10px; margin-bottom: 0.45rem; font-size: 0.85rem; }
+    .chat-msg .who { font-size: 0.7rem; color: var(--accent); font-weight: 600; }
+    .chat-msg .when { font-size: 0.65rem; color: var(--muted); }
+    .chat-msg.paid { border-color: rgba(255,210,74,0.4); }
+    .chat-foot { padding: 0.7rem; border-top: 1px solid var(--line); }
+    .chat-foot textarea { resize: none; }
+    .chat-opts { display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: center; }
+    .chat-opts label { margin: 0; font-size: 0.72rem; color: var(--muted); display: flex; align-items: center; gap: 0.3rem; }
+    .chat-empty { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 1rem 0; }
   </style>
 </head>
 <body>
@@ -140,7 +178,7 @@
         <div id="avatarFb" class="avatar-fallback" style="display:none">D</div>
         <div>
           <h1>Dani Gorbaciov - XRP Live</h1>
-          <small>Dashboard · Loyalty · Encrypted Messenger</small>
+          <small>Dashboard · Loyalty · Encrypted Messenger · Virtual Chat</small>
         </div>
       </div>
       <nav>
@@ -242,12 +280,35 @@
     <footer>Dani Gorbaciov - XRP Live · demo local · seed-urile rămân în browser</footer>
   </div>
 
+  <!-- Virtual Chat launcher (center-right, always active) -->
+  <div class="chat-launcher" id="chatLauncher">
+    <div class="chat-panel hidden" id="chatPanel">
+      <div class="chat-head">
+        <h3>Chat virtual XRP Live</h3>
+        <span class="chat-close" id="chatClose">×</span>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="chat-empty">Nimeni nu a scris încă. Fii primul!</div>
+      </div>
+      <div class="chat-foot">
+        <textarea id="chatInput" rows="2" placeholder="Scrie în chat..."></textarea>
+        <div class="chat-opts">
+          <label><input type="checkbox" id="chatPaid"> Plătește 1 drop (0.000001 XRP)</label>
+          <button class="btn primary" id="chatSendBtn" style="flex:0 0 auto;padding:0.6rem 0.9rem"><span class="ring"></span><span class="scan"></span>Trimite</button>
+        </div>
+        <div id="chatStatus" class="status"></div>
+      </div>
+    </div>
+    <button class="chat-fab" id="chatFab" title="Deschide chat"><span class="ring"></span><span class="scan"></span>💬</button>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
   <script>
     let connectedWallet = null;
     let generated = null;
     let premTotal = 0;
     let audioCtx = null;
+    let chatOpen = false;
 
     function beep(freq=880, dur=0.08, type='sine', vol=0.05) {
       try {
@@ -263,7 +324,7 @@
       el.classList.add('pressed'); beep(920, 0.07, 'square', 0.04);
       setTimeout(() => el.classList.remove('pressed'), 420);
     }
-    document.querySelectorAll('.nav-btn, .btn').forEach(b => b.addEventListener('click', () => press(b)));
+    document.querySelectorAll('.nav-btn, .btn, .chat-fab').forEach(b => b.addEventListener('click', () => press(b)));
 
     function showTab(tab) {
       document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
@@ -322,50 +383,46 @@
       } catch(e) { setStatus('sendStatus', 'Eroare: ' + e.message, false); }
     });
 
+    // Loyalty
     document.getElementById('claimBtn').addEventListener('click', async () => {
-      if (!connectedWallet) { setStatus('loyaltyStatus', 'Conectează wallet-ul pentru a revendica puncte.', false); return; }
-      const amount = parseInt(document.getElementById('rewardAmount').value) || 10;
-      setStatus('loyaltyStatus', 'Emit puncte...', true);
+      const amt = parseInt(document.getElementById('rewardAmount').value) || 10;
+      setStatus('loyaltyStatus', 'Revendic...', true);
       try {
-        const res = await fetch('/api/loyalty/claim', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seed: connectedWallet.seed, amount, network: connectedWallet.network }) });
+        const res = await fetch('/api/loyalty/claim', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ amount: amt, seed: connectedWallet && connectedWallet.seed, network: connectedWallet && connectedWallet.network }) });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
-        premTotal += amount;
+        premTotal += amt;
         document.getElementById('premPoints').textContent = premTotal + ' PREM';
-        setStatus('loyaltyStatus', 'Ai primit ' + amount + ' PREM. Hash: ' + data.hash.slice(0,16) + '...', true);
+        setStatus('loyaltyStatus', 'Ai primit ' + amt + ' PREM.', true);
         const log = document.getElementById('loyaltyLog');
         const div = document.createElement('div');
-        div.className = 'msg sent';
-        div.innerHTML = '+' + amount + ' PREM <span class="meta">' + new Date().toLocaleString() + '</span>';
+        div.className = 'msg';
+        div.innerHTML = '+' + amt + ' PREM <span class="meta">' + new Date().toLocaleTimeString() + '</span>';
         log.prepend(div);
       } catch(e) { setStatus('loyaltyStatus', 'Eroare: ' + e.message, false); }
     });
 
+    // Messenger
     document.getElementById('sendMsgBtn').addEventListener('click', async () => {
-      if (!connectedWallet) { setStatus('msgStatus', 'Conectează wallet-ul.', false); return; }
       const recipient = document.getElementById('recipient').value.trim();
       const text = document.getElementById('messageInput').value.trim();
       const key = document.getElementById('msgKey').value;
-      if (!recipient || !text || !key) { setStatus('msgStatus', 'Completează destinatarul, mesajul și cheia.', false); return; }
+      if (!recipient || !text || !key) { setStatus('msgStatus', 'Completează destinatar, mesaj și cheie.', false); return; }
       setStatus('msgStatus', 'Criptez și trimit...', true);
       try {
-        const encrypted = CryptoJS.AES.encrypt(text, key).toString();
-        const res = await fetch('/api/messenger/send', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seed: connectedWallet.seed, destination: recipient, encrypted, network: connectedWallet.network }) });
+        const cipher = CryptoJS.AES.encrypt(text, key).toString();
+        const res = await fetch('/api/messenger/send', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ recipient, cipher, seed: connectedWallet && connectedWallet.seed, network: connectedWallet && connectedWallet.network }) });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
-        const box = document.getElementById('messages');
-        const div = document.createElement('div');
-        div.className = 'msg sent';
-        div.innerHTML = 'Către ' + recipient + '<br>' + text + '<span class="meta">criptat · ' + new Date().toLocaleString() + '</span>';
-        box.prepend(div);
+        setStatus('msgStatus', 'Trimis criptat! Hash: ' + (data.hash||'').slice(0,16) + '...', true);
         document.getElementById('messageInput').value = '';
-        setStatus('msgStatus', 'Trimis criptat. Hash: ' + data.hash.slice(0,16) + '...', true);
       } catch(e) { setStatus('msgStatus', 'Eroare: ' + e.message, false); }
     });
 
+    // Wallet gen
     document.getElementById('genBtn').addEventListener('click', async () => {
       const network = document.getElementById('genNetwork').value;
-      setStatus('genStatus', 'Generez wallet...', true);
+      setStatus('genStatus', 'Generez...', true);
       try {
         const res = await fetch('/api/wallet/generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ network }) });
         const data = await res.json();
@@ -374,26 +431,94 @@
         document.getElementById('genAddress').textContent = data.wallet.address;
         document.getElementById('genSeed').textContent = data.wallet.seed;
         document.getElementById('genBox').classList.remove('hidden');
-        setStatus('genStatus', 'Wallet generat pe ' + network + '.', true);
+        setStatus('genStatus', 'Wallet generat.', true);
       } catch(e) { setStatus('genStatus', 'Eroare: ' + e.message, false); }
     });
 
     document.getElementById('exportBtn').addEventListener('click', () => {
-      if (!generated) { setStatus('genStatus', 'Generează mai întâi un wallet.', false); return; }
+      if (!generated) return;
       const pass = document.getElementById('exportPass').value;
-      if (!pass) { setStatus('genStatus', 'Introdu o parolă pentru export.', false); return; }
-      const encrypted = CryptoJS.AES.encrypt(generated.seed, pass).toString();
+      if (!pass) { setStatus('genStatus', 'Pune o parolă pentru export.', false); return; }
+      const enc = CryptoJS.AES.encrypt(generated.seed, pass).toString();
       const out = document.getElementById('exportOut');
-      out.textContent = encrypted;
+      out.textContent = enc;
       out.classList.remove('hidden');
-      setStatus('genStatus', 'Seed criptat. Salvează textul offline.', true);
+      setStatus('genStatus', 'Seed criptat. Salvează-l offline.', true);
     });
 
     document.getElementById('copySeedBtn').addEventListener('click', () => {
       if (!generated) return;
       navigator.clipboard.writeText(generated.seed);
-      setStatus('genStatus', 'Seed copiat în clipboard.', true);
+      setStatus('genStatus', 'Seed copiat.', true);
     });
+
+    // Virtual chat
+    const chatFab = document.getElementById('chatFab');
+    const chatPanel = document.getElementById('chatPanel');
+    const chatBody = document.getElementById('chatBody');
+    const chatInput = document.getElementById('chatInput');
+    const chatPaid = document.getElementById('chatPaid');
+    const chatSendBtn = document.getElementById('chatSendBtn');
+    const chatStatus = document.getElementById('chatStatus');
+    const chatClose = document.getElementById('chatClose');
+
+    function toggleChat() {
+      chatOpen = !chatOpen;
+      chatPanel.classList.toggle('hidden', !chatOpen);
+      if (chatOpen) loadChat();
+    }
+    chatFab.addEventListener('click', toggleChat);
+    chatClose.addEventListener('click', toggleChat);
+
+    function renderChat(msgs) {
+      if (!msgs || msgs.length === 0) {
+        chatBody.innerHTML = '<div class="chat-empty">Nimeni nu a scris încă. Fii primul!</div>';
+        return;
+      }
+      chatBody.innerHTML = msgs.map(m => {
+        const when = new Date(m.ts).toLocaleTimeString();
+        const who = (m.address || 'anonim').slice(0, 10) + '...';
+        return '<div class="chat-msg' + (m.paid ? ' paid' : '') + '">' +
+          '<div class="who">' + who + (m.paid ? ' · plătit 1 drop' : '') + '</div>' +
+          '<div>' + escapeHtml(m.text) + '</div>' +
+          '<div class="when">' + when + '</div>' +
+          '</div>';
+      }).join('');
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+    function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    async function loadChat() {
+      try {
+        const res = await fetch('/api/chat/messages');
+        const data = await res.json();
+        if (data.ok) renderChat(data.messages);
+      } catch(e) { chatBody.innerHTML = '<div class="chat-empty">Nu pot încărca chat-ul.</div>'; }
+    }
+
+    chatSendBtn.addEventListener('click', async () => {
+      const text = chatInput.value.trim();
+      if (!text) { setStatus('chatStatus', 'Scrie ceva.', false); return; }
+      const paid = chatPaid.checked;
+      if (paid && !connectedWallet) { setStatus('chatStatus', 'Conectează wallet-ul pentru plată.', false); return; }
+      setStatus('chatStatus', paid ? 'Trimit cu plată 1 drop...' : 'Trimit...', true);
+      try {
+        const res = await fetch('/api/chat/post', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seed: connectedWallet && connectedWallet.seed, text, network: connectedWallet && connectedWallet.network, paid }) });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        chatInput.value = '';
+        setStatus('chatStatus', paid ? 'Mesaj plătit trimis!' : 'Mesaj trimis.', true);
+        loadChat();
+        if (paid && connectedWallet) {
+          const balRes = await fetch('/api/wallet/balance', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ address: connectedWallet.address, network: connectedWallet.network }) });
+          const balData = await balRes.json();
+          if (balData.ok) document.getElementById('xrpBalance').textContent = balData.wallet.balance.toFixed(6) + ' XRP';
+        }
+      } catch(e) { setStatus('chatStatus', 'Eroare: ' + e.message, false); }
+    });
+
+    // auto-refresh chat when open
+    setInterval(() => { if (chatOpen) loadChat(); }, 4000);
   </script>
 </body>
 </html>
