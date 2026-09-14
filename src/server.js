@@ -11,7 +11,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', network: 'XRPL', features: ['dashboard', 'loyalty', 'messenger', 'real-wallet', 'wallet-gen', 'encrypted-export'] });
+  res.json({ status: 'ok', platform: 'Dani Gorbaciov - XRP Live', network: 'XRPL', features: ['dashboard', 'loyalty', 'messenger', 'real-wallet', 'wallet-gen', 'encrypted-export'] });
 });
 
 app.post('/api/wallet/connect', async (req, res) => {
@@ -56,5 +56,5 @@ app.post('/api/wallet/generate', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`XRPL Nexus dashboard running at http://localhost:${PORT}`);
+  console.log(`Dani Gorbaciov - XRP Live running at http://localhost:${PORT}`);
 });

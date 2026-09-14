@@ -1,7 +1,7 @@
 {
-  "name": "xrpl-platform",
-  "version": "0.3.0",
-  "description": "XRPL Nexus — dashboard, loyalty, encrypted messenger, wallet gen",
+  "name": "dani-gorbaciov-xrp-live",
+  "version": "1.0.0",
+  "description": "Dani Gorbaciov - XRP Live — dashboard, loyalty, encrypted messenger, wallet gen on XRPL",
   "type": "module",
   "scripts": {
     "dashboard": "node src/server.js",

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XRPL Nexus</title>
+  <title>Dani Gorbaciov - XRP Live</title>
   <style>
     :root {
       --bg: #05070f;
@@ -139,7 +139,7 @@
         <img id="avatarImg" class="avatar" src="avatar.png" alt="avatar" onerror="this.style.display='none';document.getElementById('avatarFb').style.display='grid'">
         <div id="avatarFb" class="avatar-fallback" style="display:none">D</div>
         <div>
-          <h1>XRPL Nexus</h1>
+          <h1>Dani Gorbaciov - XRP Live</h1>
           <small>Dashboard · Loyalty · Encrypted Messenger</small>
         </div>
       </div>
@@ -239,7 +239,7 @@
         </div>
       </section>
     </main>
-    <footer>XRPL Nexus · demo local · seed-urile rămân în browser</footer>
+    <footer>Dani Gorbaciov - XRP Live · demo local · seed-urile rămân în browser</footer>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
@@ -322,41 +322,51 @@
       } catch(e) { setStatus('sendStatus', 'Eroare: ' + e.message, false); }
     });
 
-    document.getElementById('claimBtn').addEventListener('click', () => {
-      const amt = parseInt(document.getElementById('rewardAmount').value || '0', 10);
-      if (!amt || amt < 1) { setStatus('loyaltyStatus', 'Cantitate invalidă.', false); return; }
-      premTotal += amt;
-      document.getElementById('premPoints').textContent = premTotal + ' PREM';
-      const log = document.getElementById('loyaltyLog');
-      const div = document.createElement('div');
-      div.className = 'msg';
-      div.innerHTML = '🏅 +' + amt + ' PREM <span class="meta">emis ca IOU · cost ~0.00001 XRP</span>';
-      log.prepend(div);
-      setStatus('loyaltyStatus', 'Recompensă emisă. Cost real minim pe XRPL.', true);
+    document.getElementById('claimBtn').addEventListener('click', async () => {
+      if (!connectedWallet) { setStatus('loyaltyStatus', 'Conectează wallet-ul pentru a revendica puncte.', false); return; }
+      const amount = parseInt(document.getElementById('rewardAmount').value) || 10;
+      setStatus('loyaltyStatus', 'Emit puncte...', true);
+      try {
+        const res = await fetch('/api/loyalty/claim', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seed: connectedWallet.seed, amount, network: connectedWallet.network }) });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        premTotal += amount;
+        document.getElementById('premPoints').textContent = premTotal + ' PREM';
+        setStatus('loyaltyStatus', 'Ai primit ' + amount + ' PREM. Hash: ' + data.hash.slice(0,16) + '...', true);
+        const log = document.getElementById('loyaltyLog');
+        const div = document.createElement('div');
+        div.className = 'msg sent';
+        div.innerHTML = '+' + amount + ' PREM <span class="meta">' + new Date().toLocaleString() + '</span>';
+        log.prepend(div);
+      } catch(e) { setStatus('loyaltyStatus', 'Eroare: ' + e.message, false); }
     });
 
-    document.getElementById('sendMsgBtn').addEventListener('click', () => {
-      const to = document.getElementById('recipient').value.trim();
-      const msg = document.getElementById('messageInput').value.trim();
+    document.getElementById('sendMsgBtn').addEventListener('click', async () => {
+      if (!connectedWallet) { setStatus('msgStatus', 'Conectează wallet-ul.', false); return; }
+      const recipient = document.getElementById('recipient').value.trim();
+      const text = document.getElementById('messageInput').value.trim();
       const key = document.getElementById('msgKey').value;
-      if (!to || !msg) { setStatus('msgStatus', 'Completează destinatarul și mesajul.', false); return; }
-      if (!key) { setStatus('msgStatus', 'Pune o cheie partajată pentru AES.', false); return; }
-      let enc = msg;
-      try { enc = CryptoJS.AES.encrypt(msg, key).toString(); } catch(e) {}
-      const box = document.getElementById('messages');
-      const div = document.createElement('div');
-      div.className = 'msg sent';
-      div.innerHTML = '🔒 ' + msg + '<span class="meta">→ ' + to.slice(0,10) + '... · AES-256</span>';
-      box.appendChild(div);
-      box.scrollTop = box.scrollHeight;
-      document.getElementById('messageInput').value = '';
-      setStatus('msgStatus', 'Mesaj criptat și trimis (demo local).', true);
+      if (!recipient || !text || !key) { setStatus('msgStatus', 'Completează destinatarul, mesajul și cheia.', false); return; }
+      setStatus('msgStatus', 'Criptez și trimit...', true);
+      try {
+        const encrypted = CryptoJS.AES.encrypt(text, key).toString();
+        const res = await fetch('/api/messenger/send', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seed: connectedWallet.seed, destination: recipient, encrypted, network: connectedWallet.network }) });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        const box = document.getElementById('messages');
+        const div = document.createElement('div');
+        div.className = 'msg sent';
+        div.innerHTML = 'Către ' + recipient + '<br>' + text + '<span class="meta">criptat · ' + new Date().toLocaleString() + '</span>';
+        box.prepend(div);
+        document.getElementById('messageInput').value = '';
+        setStatus('msgStatus', 'Trimis criptat. Hash: ' + data.hash.slice(0,16) + '...', true);
+      } catch(e) { setStatus('msgStatus', 'Eroare: ' + e.message, false); }
     });
 
     document.getElementById('genBtn').addEventListener('click', async () => {
-      setStatus('genStatus', 'Generez...', true);
+      const network = document.getElementById('genNetwork').value;
+      setStatus('genStatus', 'Generez wallet...', true);
       try {
-        const network = document.getElementById('genNetwork').value;
         const res = await fetch('/api/wallet/generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ network }) });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
@@ -368,22 +378,21 @@
       } catch(e) { setStatus('genStatus', 'Eroare: ' + e.message, false); }
     });
 
-    document.getElementById('copySeedBtn').addEventListener('click', async () => {
-      if (!generated) return;
-      try { await navigator.clipboard.writeText(generated.seed); setStatus('genStatus', 'Seed copiat în clipboard.', true); }
-      catch(e) { setStatus('genStatus', 'Nu am putut copia automat.', false); }
-    });
-
     document.getElementById('exportBtn').addEventListener('click', () => {
       if (!generated) { setStatus('genStatus', 'Generează mai întâi un wallet.', false); return; }
       const pass = document.getElementById('exportPass').value;
-      if (!pass) { setStatus('genStatus', 'Introdu o parolă pentru criptare.', false); return; }
-      const payload = JSON.stringify({ address: generated.address, seed: generated.seed, network: generated.network, t: Date.now() });
-      const enc = CryptoJS.AES.encrypt(payload, pass).toString();
+      if (!pass) { setStatus('genStatus', 'Introdu o parolă pentru export.', false); return; }
+      const encrypted = CryptoJS.AES.encrypt(generated.seed, pass).toString();
       const out = document.getElementById('exportOut');
-      out.textContent = enc;
+      out.textContent = encrypted;
       out.classList.remove('hidden');
-      setStatus('genStatus', 'Seed criptat. Salvează textul de mai jos în siguranță.', true);
+      setStatus('genStatus', 'Seed criptat. Salvează textul offline.', true);
+    });
+
+    document.getElementById('copySeedBtn').addEventListener('click', () => {
+      if (!generated) return;
+      navigator.clipboard.writeText(generated.seed);
+      setStatus('genStatus', 'Seed copiat în clipboard.', true);
     });
   </script>
 </body>

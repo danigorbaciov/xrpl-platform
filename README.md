@@ -1,4 +1,4 @@
-# XRPL Nexus
+# Dani Gorbaciov - XRP Live
 
 Interactive dashboard + premium loyalty + encrypted messenger on XRP Ledger, with real wallet support and wallet generation.
 
