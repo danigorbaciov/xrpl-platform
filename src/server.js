@@ -56,20 +56,19 @@ app.post('/api/wallet/generate', async (req, res) => {
   }
 });
 
-// Virtual chat endpoints
 app.get('/api/chat/messages', (req, res) => {
   res.json({ ok: true, messages: getChatMessages() });
 });
 
 app.post('/api/chat/post', async (req, res) => {
   try {
-    const { content, text, network = 'testnet', paid = false } = req.body;
+    const { seed, text, network = 'testnet', paid = false } = req.body;
     if (!text || !text.trim()) throw new Error('Mesajul nu poate fi gol.');
     let entry;
-    if (paid && content) {
-      entry = await postPaidMessage(content, text.trim(), network);
+    if (paid && seed) {
+      entry = await postPaidMessage(seed, text.trim(), network);
     } else {
-      const wallet = content ? walletFromSeed(content) : null;
+      const wallet = seed ? walletFromSeed(seed) : null;
       entry = addLocalMessage(wallet ? wallet.address : 'anonim', text.trim());
     }
     res.json({ ok: true, message: entry });
