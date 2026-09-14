@@ -1,34 +1,36 @@
 # XRPL Platform
 
-A starter platform for building on the XRP Ledger (XRPL) with XRP and Ripple integrations.
+Interactive dashboard + premium loyalty + encrypted messenger on XRP Ledger.
 
 ## Features
-- Connect to XRPL Testnet
-- Fund test wallets via faucet
-- Query account info and balances
-- Send XRP payments
-- Subscribe to ledger events
+- Connect to XRPL Testnet/Mainnet
+- Wallet funding & XRP transfers
+- Premium points loyalty (low-cost XRP rewards)
+- Encrypted messenger (E2E via XRPL memos + AES)
+- Simple web dashboard UI
 
-## Setup
+## Quick start
 ```bash
 npm install
+npm run dashboard
 ```
 
-## Run examples
-```bash
-node src/connect.js
-node src/send-xrp.js
-```
+Open http://localhost:3000
 
-## Network
-Uses public Testnet: wss://s.altnet.rippletest.net:51233
+## Scripts
+- `node src/connect.js` - connect & read account
+- `node src/send-xrp.js` - send test XRP
+- `node src/loyalty.js` - issue premium points
+- `node src/messenger.js` - send encrypted message
 
-Explorer: https://testnet.xrpl.org
+## Loyalty economics
+- Base reserve ~1 XRP, owner reserve 0.2 XRP per trustline
+- Points issued as IOU token (e.g. PREM) cost almost nothing beyond reserves
+- Rewards can be tiny fractions of XRP or your token
 
-## Next steps
-- Add trust lines and issued currencies (e.g. RLUSD)
-- Build a simple dashboard
-- Add payment channels or escrows
-- Deploy a web UI
+## Messenger
+- Messages encrypted client-side (AES-256)
+- Payload stored in XRPL Payment memo (1 drop)
+- Only recipient with key can decrypt
 
-Built with xrpl.js (latest).
+Built with xrpl.js. For demo only.

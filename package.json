@@ -1,16 +1,18 @@
 {
   "name": "xrpl-platform",
-  "version": "0.1.0",
-  "description": "Starter platform for XRP Ledger / Ripple development",
+  "version": "0.2.0",
+  "description": "XRPL dashboard, loyalty points and encrypted messenger",
   "type": "module",
   "scripts": {
+    "dashboard": "node src/server.js",
     "connect": "node src/connect.js",
-    "send": "node src/send-xrp.js"
+    "send": "node src/send-xrp.js",
+    "loyalty": "node src/loyalty.js",
+    "messenger": "node src/messenger.js"
   },
   "dependencies": {
-    "xrpl": "^5.1.0"
-  },
-  "engines": {
-    "node": ">=20"
+    "xrpl": "^5.1.0",
+    "express": "^4.19.2",
+    "crypto-js": "^4.2.0"
   }
 }
